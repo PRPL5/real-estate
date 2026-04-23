@@ -1,10 +1,12 @@
 import bcrypt from "bcryptjs";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, ListingStatus, ListingVisibility } from "@prisma/client";
+import { Pool } from "pg";
 
-const adapter = new PrismaBetterSqlite3({
-  url: process.env.DATABASE_URL ?? "file:./dev.db",
+const pool = new Pool({
+  connectionString: process.env.POSTGRES_URL_NON_POOLING,
 });
+const adapter = new PrismaPg(pool);
 
 const prisma = new PrismaClient({ adapter });
 
