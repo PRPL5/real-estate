@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f5f1eb;
+  --foreground: #171717;
+  --muted: #6a645f;
+  --panel: #fbf7f3;
+  --accent: #a47b5a;
+  --accent-dark: #7b593f;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body), sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+::selection {
+  background: rgba(164, 123, 90, 0.2);
+}
+
+.page-section {
+  @apply mx-auto w-full max-w-7xl px-5 sm:px-6 lg:px-8;
+}
+
+.eyebrow {
+  @apply text-xs uppercase tracking-[0.32em] text-[#8d7f73];
+}
+
+.display-title {
+  font-family: var(--font-display), serif;
+}
+
+.hero-gradient {
+  background:
+    radial-gradient(circle at top right, rgba(164, 123, 90, 0.28), transparent 28%),
+    radial-gradient(circle at left 30%, rgba(255, 255, 255, 0.85), transparent 32%),
+    linear-gradient(180deg, #f6f1eb 0%, #f1ebe4 60%, #efe7de 100%);
+}
+
+.grid-fade {
+  background-image:
+    linear-gradient(rgba(17, 17, 17, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17, 17, 17, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
