@@ -1,15 +1,22 @@
-import { PrismaPg } from "@prisma/adapter-pg";
+import { neonConfig, Pool } from "@neondatabase/serverless";
+import { PrismaNeon } from "@prisma/adapter-neon";
 import { PrismaClient } from "@prisma/client";
-import { Pool } from "pg";
+import ws from "ws";
+
+// Configure WebSocket for Node.js environment
+neonConfig.webSocketConstructor = ws;
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL,
-});
-const adapter = new PrismaPg(pool);
+// Add uselibpqcompat=true to fix SSL certificate issues with Prisma 7
+const connectionString = process.env.POSTGRES_URL
+  ? `${process.env.POSTGRES_URL}${process.env.POSTGRES_URL.includes("?") ? "&" : "?"}uselibpqcompat=true`
+  : undefined;
+
+const pool = new Pool({ connectionString });
+const adapter = new PrismaNeon(pool);
 
 export const prisma =
   globalForPrisma.prisma ??
