@@ -9,7 +9,6 @@ const globalForPrisma = globalThis as unknown as {
 const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,
 });
-
 const adapter = new PrismaPg(pool);
 
 export const prisma =
