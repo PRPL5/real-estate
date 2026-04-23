@@ -20,6 +20,15 @@ Single-agent real estate platform built with Next.js 16, Prisma, SQLite, and a s
 - Tailwind CSS 4
 - Server Actions for admin mutations
 
+## Environment
+
+Set your Supabase and Postgres values in `.env`.
+
+- `POSTGRES_URL`: pooled runtime connection string
+- `POSTGRES_URL_NON_POOLING`: direct connection string for admin tasks and seeding
+- `POSTGRES_PRISMA_URL`: Prisma CLI connection string
+- `SUPABASE_*`: optional frontend/backend Supabase keys if you add Supabase client features later
+
 ## Local Setup
 
 ```bash

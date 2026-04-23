@@ -1,19 +1,33 @@
 import bcrypt from "bcryptjs";
-import { neonConfig, Pool } from "@neondatabase/serverless";
+import { neonConfig } from "@neondatabase/serverless";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { PrismaClient, ListingStatus, ListingVisibility } from "@prisma/client";
 import ws from "ws";
 
 // Configure WebSocket for Node.js environment
 neonConfig.webSocketConstructor = ws;
+function getSeedDatabaseUrl() {
+  const connectionString =
+    process.env.DIRECT_URL ||
+    process.env.POSTGRES_URL_NON_POOLING ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL;
 
-// Add uselibpqcompat=true to fix SSL certificate issues with Prisma 7
-const connectionString = process.env.POSTGRES_URL_NON_POOLING
-  ? `${process.env.POSTGRES_URL_NON_POOLING}${process.env.POSTGRES_URL_NON_POOLING.includes("?") ? "&" : "?"}uselibpqcompat=true`
-  : undefined;
+  if (!connectionString) {
+    throw new Error(
+      "Missing Postgres connection string for seeding. Set DIRECT_URL, POSTGRES_URL_NON_POOLING, POSTGRES_PRISMA_URL, DATABASE_URL, or POSTGRES_URL.",
+    );
+  }
 
-const pool = new Pool({ connectionString });
-const adapter = new PrismaNeon(pool);
+  return connectionString;
+}
+
+const rawConnectionString = getSeedDatabaseUrl();
+const connectionString = rawConnectionString.includes("uselibpqcompat=true")
+  ? rawConnectionString
+  : `${rawConnectionString}${rawConnectionString.includes("?") ? "&" : "?"}uselibpqcompat=true`;
+const adapter = new PrismaNeon({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {

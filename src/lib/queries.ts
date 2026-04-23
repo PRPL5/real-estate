@@ -1,5 +1,5 @@
 import { ListingVisibility } from "@prisma/client";
-import { cache } from "react";
+import { unstable_noStore as noStore } from "next/cache";
 import { prisma } from "@/lib/prisma";
 
 const listingInclude = {
@@ -10,21 +10,24 @@ const listingInclude = {
   },
 };
 
-export const getAgentProfile = cache(async () => {
+export async function getAgentProfile() {
+  noStore();
   return prisma.adminUser.findFirst({
     orderBy: { createdAt: "asc" },
   });
-});
+}
 
-export const getPublishedListings = cache(async () => {
+export async function getPublishedListings() {
+  noStore();
   return prisma.listing.findMany({
     where: { visibility: ListingVisibility.PUBLISHED },
     include: listingInclude,
     orderBy: [{ featured: "desc" }, { updatedAt: "desc" }],
   });
-});
+}
 
-export const getFeaturedListings = cache(async () => {
+export async function getFeaturedListings() {
+  noStore();
   return prisma.listing.findMany({
     where: {
       visibility: ListingVisibility.PUBLISHED,
@@ -34,9 +37,10 @@ export const getFeaturedListings = cache(async () => {
     orderBy: { updatedAt: "desc" },
     take: 3,
   });
-});
+}
 
-export const getPublicListingBySlug = cache(async (slug: string) => {
+export async function getPublicListingBySlug(slug: string) {
+  noStore();
   return prisma.listing.findFirst({
     where: {
       slug,
@@ -44,18 +48,20 @@ export const getPublicListingBySlug = cache(async (slug: string) => {
     },
     include: listingInclude,
   });
-});
+}
 
-export const getAdminListings = cache(async () => {
+export async function getAdminListings() {
+  noStore();
   return prisma.listing.findMany({
     include: listingInclude,
     orderBy: { updatedAt: "desc" },
   });
-});
+}
 
-export const getAdminListingById = cache(async (id: string) => {
+export async function getAdminListingById(id: string) {
+  noStore();
   return prisma.listing.findUnique({
     where: { id },
     include: listingInclude,
   });
-});
+}

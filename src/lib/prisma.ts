@@ -1,4 +1,4 @@
-import { neonConfig, Pool } from "@neondatabase/serverless";
+import { neonConfig } from "@neondatabase/serverless";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { PrismaClient } from "@prisma/client";
 import ws from "ws";
@@ -10,13 +10,29 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// Add uselibpqcompat=true to fix SSL certificate issues with Prisma 7
-const connectionString = process.env.POSTGRES_URL
-  ? `${process.env.POSTGRES_URL}${process.env.POSTGRES_URL.includes("?") ? "&" : "?"}uselibpqcompat=true`
-  : undefined;
+function getRuntimeDatabaseUrl() {
+  const connectionString =
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_URL_NON_POOLING ||
+    process.env.DIRECT_URL ||
+    process.env.POSTGRES_PRISMA_URL;
 
-const pool = new Pool({ connectionString });
-const adapter = new PrismaNeon(pool);
+  if (!connectionString) {
+    throw new Error(
+      "Missing Postgres connection string. Set DATABASE_URL, POSTGRES_URL, DIRECT_URL, POSTGRES_URL_NON_POOLING, or POSTGRES_PRISMA_URL in your local environment.",
+    );
+  }
+
+  return connectionString;
+}
+
+const rawConnectionString = getRuntimeDatabaseUrl();
+const connectionString = rawConnectionString.includes("uselibpqcompat=true")
+  ? rawConnectionString
+  : `${rawConnectionString}${rawConnectionString.includes("?") ? "&" : "?"}uselibpqcompat=true`;
+
+const adapter = new PrismaNeon({ connectionString });
 
 export const prisma =
   globalForPrisma.prisma ??
