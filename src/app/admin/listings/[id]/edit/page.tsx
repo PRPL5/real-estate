@@ -22,6 +22,7 @@ export default async function EditListingPage({ params }: Props) {
     <AdminShell
       title="Edit Listing"
       description="Update listing details, revise the image order, and control whether the property is live."
+      currentPath="/admin/listings"
     >
       <ListingForm listing={listing} action={updateListingAction.bind(null, listing.id)} />
     </AdminShell>

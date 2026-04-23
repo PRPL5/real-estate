@@ -11,6 +11,7 @@ export default async function NewListingPage() {
     <AdminShell
       title="Create Listing"
       description="Add a new property, upload images, choose a cover image, and save as draft or publish."
+      currentPath="/admin/listings/new"
     >
       <ListingForm
         action={createListingAction}

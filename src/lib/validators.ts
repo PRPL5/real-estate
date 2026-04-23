@@ -15,7 +15,7 @@ export const listingSchema = z.object({
   summary: z.string().trim().min(12, "Short summary is required."),
   description: z.string().trim().min(40, "Full description is required."),
   address: z.string().trim().min(4, "Location is required."),
-  mapUrl: z.url("Enter a valid Google Maps link or map URL."),
+  mapUrl: z.union([z.literal(""), z.url("Enter a valid Google Maps link or map URL.")]),
   bedrooms: z.coerce.number().int().min(0),
   bathrooms: z.coerce.number().min(0),
   area: z.coerce.number().int().positive("Area must be a positive number."),
@@ -23,14 +23,31 @@ export const listingSchema = z.object({
   listingStatus: listingStatusSchema,
   visibility: visibilitySchema,
   contactName: z.string().trim().min(2, "Contact name is required."),
-  contactEmail: z.email().trim().toLowerCase(),
-  contactPhone: z.string().trim().min(7, "Phone number is required."),
+  contactEmail: z.union([z.literal(""), z.email().trim().toLowerCase()]),
+  contactPhone: z.string().trim(),
   contactWhatsapp: z.string().trim().optional().or(z.literal("")),
   officeAddress: z.string().trim().optional().or(z.literal("")),
   featured: z.boolean().default(false),
-  coverSelection: z.string().trim().min(1, "Choose a cover image."),
+  coverSelection: z.string().trim().optional().or(z.literal("")),
   imagePlan: z.string().trim().min(2),
   removedImageIds: z.string().trim().optional().default("[]"),
+}).superRefine((value, ctx) => {
+  if (!value.contactPhone && !value.contactEmail) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["contactPhone"],
+      message: "Add a contact phone number or contact email.",
+    });
+  }
+});
+
+export const settingsSchema = z.object({
+  name: z.string().trim().min(2, "Agent name is required."),
+  email: z.email().trim().toLowerCase(),
+  phone: z.string().trim().min(7, "Phone number is required."),
+  whatsapp: z.string().trim().optional().or(z.literal("")),
+  officeAddress: z.string().trim().optional().or(z.literal("")),
+  bio: z.string().trim().min(20, "Add a short professional bio."),
 });
 
 export type ListingFormValues = z.infer<typeof listingSchema>;

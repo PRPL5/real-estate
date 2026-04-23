@@ -7,7 +7,7 @@ import { authenticateAdmin, clearAdminSession, createAdminSession, requireAdmin 
 import { prisma } from "@/lib/prisma";
 import { deleteLocalImages, saveUploadedImages } from "@/lib/uploads";
 import { slugify } from "@/lib/utils";
-import { loginSchema, listingSchema } from "@/lib/validators";
+import { loginSchema, listingSchema, settingsSchema } from "@/lib/validators";
 
 type ActionState = {
   error?: string;
@@ -66,7 +66,7 @@ async function upsertListing(formData: FormData, listingId?: string) {
     area: formData.get("area"),
     areaUnit: formData.get("areaUnit"),
     listingStatus: formData.get("listingStatus"),
-    visibility: formData.get("visibility"),
+    visibility: formData.get("publishAction") ?? formData.get("visibility"),
     contactName: formData.get("contactName"),
     contactEmail: formData.get("contactEmail"),
     contactPhone: formData.get("contactPhone"),
@@ -139,16 +139,24 @@ async function upsertListing(formData: FormData, listingId?: string) {
     })
     .filter(Boolean);
 
-  if (!orderedImages.length) {
-    await deleteLocalImages(uploadedImages.map((image) => image.url));
-    return { error: "At least one image is required." };
-  }
-
   const coverSelection = parsed.data.coverSelection;
-  if (!orderedImages.some((image) => image?.id === coverSelection)) {
+  if (orderedImages.length && !orderedImages.some((image) => image?.id === coverSelection)) {
     await deleteLocalImages(uploadedImages.map((image) => image.url));
     return { error: "Choose a valid cover image." };
   }
+
+  const fallbackMapUrl =
+    parsed.data.mapUrl ||
+    `https://maps.google.com/?q=${encodeURIComponent(parsed.data.address)}`;
+  const fallbackEmail =
+    parsed.data.contactEmail ||
+    (await prisma.adminUser.findFirst({ orderBy: { createdAt: "asc" } }))?.email ||
+    process.env.ADMIN_EMAIL ||
+    "agent@northpoint.com";
+  const fallbackPhone =
+    parsed.data.contactPhone ||
+    (await prisma.adminUser.findFirst({ orderBy: { createdAt: "asc" } }))?.phone ||
+    "+1 (310) 555-0148";
 
   const slug = await buildUniqueSlug(parsed.data.title, listingId);
   const payload = {
@@ -159,7 +167,7 @@ async function upsertListing(formData: FormData, listingId?: string) {
     summary: sanitizeText(parsed.data.summary),
     description: parsed.data.description.trim(),
     address: sanitizeText(parsed.data.address),
-    mapUrl: parsed.data.mapUrl,
+    mapUrl: fallbackMapUrl,
     bedrooms: parsed.data.bedrooms,
     bathrooms: parsed.data.bathrooms,
     area: parsed.data.area,
@@ -167,14 +175,16 @@ async function upsertListing(formData: FormData, listingId?: string) {
     listingStatus: parsed.data.listingStatus as ListingStatus,
     visibility: parsed.data.visibility as ListingVisibility,
     contactName: sanitizeText(parsed.data.contactName),
-    contactEmail: parsed.data.contactEmail,
-    contactPhone: sanitizeText(parsed.data.contactPhone),
+    contactEmail: fallbackEmail,
+    contactPhone: sanitizeText(fallbackPhone),
     contactWhatsapp: parsed.data.contactWhatsapp || null,
     officeAddress: parsed.data.officeAddress || null,
     featured: parsed.data.featured,
   };
 
   const coverUrl = orderedImages.find((image) => image?.id === coverSelection)?.url;
+
+  let savedListingId = listingId;
 
   if (existingListing) {
     const existingListingId = existingListing.id;
@@ -227,7 +237,7 @@ async function upsertListing(formData: FormData, listingId?: string) {
 
     await deleteLocalImages(removedUrls);
   } else {
-    await prisma.listing.create({
+    const created = await prisma.listing.create({
       data: {
         ...payload,
         images: {
@@ -240,6 +250,7 @@ async function upsertListing(formData: FormData, listingId?: string) {
         },
       },
     });
+    savedListingId = created.id;
   }
 
   revalidatePath("/");
@@ -247,13 +258,17 @@ async function upsertListing(formData: FormData, listingId?: string) {
   revalidatePath("/contact");
   revalidatePath("/listings");
   revalidatePath("/admin/dashboard");
+  revalidatePath("/admin/listings");
   if (existingListing) {
     revalidatePath(`/listings/${existingListing.slug}`);
     revalidatePath(`/admin/listings/${existingListing.id}/edit`);
   }
   revalidatePath(`/listings/${slug}`);
-
-  redirect("/admin/dashboard?success=listing-saved");
+  if (savedListingId) {
+    revalidatePath(`/admin/listings/${savedListingId}`);
+    redirect(`/admin/listings/${savedListingId}?success=listing-saved`);
+  }
+  redirect("/admin/listings?success=listing-saved");
 }
 
 export async function loginAction(
@@ -315,7 +330,9 @@ export async function deleteListingAction(formData: FormData) {
   revalidatePath("/");
   revalidatePath("/listings");
   revalidatePath("/admin/dashboard");
+  revalidatePath("/admin/listings");
   revalidatePath(`/listings/${listing.slug}`);
+  redirect("/admin/listings?success=listing-deleted");
 }
 
 export async function togglePublishAction(formData: FormData) {
@@ -333,4 +350,47 @@ export async function togglePublishAction(formData: FormData) {
   revalidatePath("/listings");
   revalidatePath("/admin/dashboard");
   revalidatePath(`/listings/${listing.slug}`);
+}
+
+export async function updateSettingsAction(_: ActionState | void, formData: FormData) {
+  await requireAdmin();
+
+  const parsed = settingsSchema.safeParse({
+    name: formData.get("name"),
+    email: formData.get("email"),
+    phone: formData.get("phone"),
+    whatsapp: formData.get("whatsapp"),
+    officeAddress: formData.get("officeAddress"),
+    bio: formData.get("bio"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Please review the settings form." };
+  }
+
+  const currentAdmin = await prisma.adminUser.findFirst({
+    orderBy: { createdAt: "asc" },
+  });
+
+  if (!currentAdmin) {
+    return { error: "Admin profile not found." };
+  }
+
+  await prisma.adminUser.update({
+    where: { id: currentAdmin.id },
+    data: {
+      name: parsed.data.name.trim(),
+      email: parsed.data.email,
+      phone: parsed.data.phone.trim(),
+      whatsapp: parsed.data.whatsapp || null,
+      officeAddress: parsed.data.officeAddress || null,
+      bio: parsed.data.bio.trim(),
+    },
+  });
+
+  revalidatePath("/");
+  revalidatePath("/about");
+  revalidatePath("/contact");
+  revalidatePath("/admin/settings");
+  redirect("/admin/settings?success=settings-saved");
 }

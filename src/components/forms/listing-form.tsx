@@ -4,7 +4,6 @@ import Image from "next/image";
 import { useActionState, useMemo, useState } from "react";
 import type { Listing, ListingImage } from "@prisma/client";
 import { propertyTypes } from "@/lib/constants";
-import { SubmitButton } from "@/components/shared/submit-button";
 
 type ListingWithImages = Listing & { images: ListingImage[] };
 
@@ -117,7 +116,13 @@ export function ListingForm({
         </div>
         <Field label="Price (USD)" name="price" type="number" defaultValue={listing?.price} required />
         <Field label="Location" name="address" defaultValue={listing?.address} required />
-        <Field label="Google Maps Link" name="mapUrl" type="url" defaultValue={listing?.mapUrl} required />
+        <Field
+          label="Google Maps Link"
+          name="mapUrl"
+          type="url"
+          defaultValue={listing?.mapUrl}
+          placeholder="Optional. A search link will be generated from the address if left blank."
+        />
         <Field label="Area Unit" name="areaUnit" defaultValue={listing?.areaUnit ?? "sq ft"} required />
         <Field label="Bedrooms" name="bedrooms" type="number" defaultValue={listing?.bedrooms} required />
         <Field label="Bathrooms" name="bathrooms" type="number" step="0.5" defaultValue={listing?.bathrooms} required />
@@ -163,7 +168,7 @@ export function ListingForm({
           <div>
             <h2 className="text-xl font-semibold text-[#171717]">Listing Gallery</h2>
             <p className="text-sm text-[#655d56]">
-              Upload multiple images, choose a cover image, and arrange the order shown on the public page.
+              Upload multiple images, preview them before saving, choose a cover image, and arrange the order shown on the public page.
             </p>
           </div>
           <label
@@ -200,6 +205,11 @@ export function ListingForm({
             ))}
           </div>
         </div>
+        {activeImages.length === 0 ? (
+          <div className="rounded-[26px] border border-dashed border-black/10 bg-[#fbf7f3] p-8 text-center text-sm text-[#655d56]">
+            No images selected yet. Images are recommended for strong presentation, but they are not required.
+          </div>
+        ) : null}
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {activeImages.map((image, index) => (
             <div key={image.id} className="overflow-hidden rounded-[26px] border border-black/8 bg-[#fbf7f3]">
@@ -252,8 +262,8 @@ export function ListingForm({
 
       <section className="grid gap-5 md:grid-cols-2">
         <Field label="Contact Name" name="contactName" defaultValue={listing?.contactName} required />
-        <Field label="Contact Email" name="contactEmail" type="email" defaultValue={listing?.contactEmail} required />
-        <Field label="Contact Phone" name="contactPhone" defaultValue={listing?.contactPhone} required />
+        <Field label="Contact Email" name="contactEmail" type="email" defaultValue={listing?.contactEmail} />
+        <Field label="Contact Phone" name="contactPhone" defaultValue={listing?.contactPhone} />
         <Field label="WhatsApp" name="contactWhatsapp" defaultValue={listing?.contactWhatsapp ?? ""} />
         <Field label="Office Address" name="officeAddress" defaultValue={listing?.officeAddress ?? ""} />
         <label className="flex items-center gap-3 rounded-2xl border border-black/10 bg-[#f6f1eb] px-4 py-3 text-sm text-[#171717]">
@@ -268,7 +278,24 @@ export function ListingForm({
         <p className="text-sm text-[#655d56]">
           Draft saves keep the listing private. Published listings appear on the public site immediately.
         </p>
-        <SubmitButton>{listing ? "Update Listing" : "Create Listing"}</SubmitButton>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="submit"
+            name="publishAction"
+            value="DRAFT"
+            className="inline-flex items-center justify-center rounded-full border border-black/10 px-5 py-3 text-sm font-medium text-[#171717] transition hover:bg-[#f4ede6]"
+          >
+            Save as Draft
+          </button>
+          <button
+            type="submit"
+            name="publishAction"
+            value="PUBLISHED"
+            className="inline-flex items-center justify-center rounded-full bg-[#171717] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#2e2a27]"
+          >
+            {listing ? "Update & Publish" : "Publish Listing"}
+          </button>
+        </div>
       </div>
     </form>
   );
@@ -281,6 +308,7 @@ function Field({
   type = "text",
   required,
   step,
+  placeholder,
 }: {
   label: string;
   name: string;
@@ -288,6 +316,7 @@ function Field({
   type?: string;
   required?: boolean;
   step?: string;
+  placeholder?: string;
 }) {
   return (
     <div className="space-y-2">
@@ -301,6 +330,7 @@ function Field({
         step={step}
         defaultValue={defaultValue ?? ""}
         required={required}
+        placeholder={placeholder}
         className="h-12 w-full rounded-2xl border border-black/10 bg-[#f6f1eb] px-4 outline-none transition focus:border-[#a47b5a]"
       />
     </div>
